@@ -807,6 +807,44 @@ impl LspClient {
         }
     }
 
+    pub async fn get_declaration(
+        &self,
+        server_id: &str,
+        uri: &str,
+        position: Position,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        let server = self
+            .get_server(server_id)
+            .ok_or_else(|| LspError::server_not_found(server_id))?;
+
+        let params = GotoDefinitionParams {
+            text_document_position_params: TextDocumentPositionParams {
+                text_document: TextDocumentIdentifier {
+                    uri: Uri::from_str(uri).map_err(|_| LspError::invalid_uri(uri))?,
+                },
+                position,
+            },
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
+        };
+
+        let response = server
+            .read()
+            .await
+            .request(
+                "textDocument/declaration".to_string(),
+                Some(serde_json::to_value(params)?),
+            )
+            .await?;
+
+        if response.is_null() {
+            Ok(None)
+        } else {
+            let declaration: GotoDefinitionResponse = serde_json::from_value(response)?;
+            Ok(Some(declaration))
+        }
+    }
+
     /// Get document highlights for a position.
     pub async fn get_document_highlights(
         &self,
