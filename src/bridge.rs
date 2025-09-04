@@ -368,6 +368,30 @@ impl LspBridge {
         }
     }
 
+    pub async fn get_declaration(
+        &self,
+        server_id: &str,
+        uri: &str,
+        position: Position,
+    ) -> Result<Option<Location>> {
+        let response = self
+            .client
+            .get_declaration(server_id, uri, position)
+            .await?;
+
+        match response {
+            Some(GotoDefinitionResponse::Scalar(location)) => Ok(Some(location)),
+            Some(GotoDefinitionResponse::Array(locations)) => Ok(locations.into_iter().next()),
+            Some(GotoDefinitionResponse::Link(links)) => {
+                Ok(links.into_iter().next().map(|link| Location {
+                    uri: link.target_uri,
+                    range: link.target_selection_range,
+                }))
+            }
+            None => Ok(None),
+        }
+    }
+
     /// Get document highlights for a position.
     pub async fn get_document_highlights(
         &self,
