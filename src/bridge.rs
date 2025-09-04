@@ -226,9 +226,10 @@ impl LspBridge {
         server_id: &str,
         uri: &str,
         position: Position,
+        include_declaration: bool,
     ) -> Result<Vec<Location>> {
         self.client
-            .find_references(server_id, uri, position, false)
+            .find_references(server_id, uri, position, include_declaration)
             .await
     }
 
