@@ -10,24 +10,18 @@ pub mod uri {
     use super::*;
 
     /// Convert a file path to an LSP URI.
+    ///
+    /// Relative paths are made absolute first. The result is percent-encoded
+    /// (`file:///C:/dir/a%20b` on Windows, `file:///dir/a%20b` elsewhere).
     pub fn from_path<P: AsRef<Path>>(path: P) -> String {
         let path = path.as_ref();
+        let absolute = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
 
-        // Handle Windows paths
-        #[cfg(windows)]
-        {
-            let path_str = path.to_string_lossy().replace('\\', "/");
-            if path_str.starts_with('/') {
-                format!("file://{path_str}")
-            } else {
-                format!("file:///{path_str}")
-            }
-        }
-
-        // Handle Unix paths
-        #[cfg(not(windows))]
-        {
-            format!("file://{}", path.display())
+        match Url::from_file_path(&absolute) {
+            Ok(url) => url.to_string(),
+            // Not representable as a file URL (e.g. a Windows path with no drive or UNC prefix):
+            // keep the unescaped fallback rather than fail.
+            Err(()) => format!("file://{}", path.to_string_lossy().replace('\\', "/")),
         }
     }
 

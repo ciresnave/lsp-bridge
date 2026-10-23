@@ -421,7 +421,11 @@ impl LspProcess {
             LspMessage::Response(response) => {
                 if let Some((_, sender)) = pending_requests.remove(&response.id) {
                     let result = if let Some(error) = response.error {
-                        Err(LspError::json_rpc(error.message).into())
+                        if error.code == crate::protocol::error_codes::CONTENT_MODIFIED {
+                            Err(LspError::content_modified(error.message).into())
+                        } else {
+                            Err(LspError::json_rpc(error.message).into())
+                        }
                     } else {
                         Ok(response.result.unwrap_or(Value::Null))
                     };
@@ -607,5 +611,45 @@ impl Drop for LspProcess {
         if self.is_running() {
             let _ = futures::executor::block_on(self.kill());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn error_for_code(code: i32) -> crate::error::LspError {
+        let pending = DashMap::new();
+        let (tx, rx) = oneshot::channel();
+        pending.insert(RequestId::Number(1), tx);
+        let body =
+            format!(r#"{{"jsonrpc":"2.0","id":1,"error":{{"code":{code},"message":"boom"}}}}"#);
+        LspProcess::handle_incoming_message(&body, &pending)
+            .await
+            .unwrap();
+        match rx.await.unwrap().unwrap_err() {
+            crate::error::LspBridgeError::Lsp(e) => e,
+            other => panic!("expected LspError, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn content_modified_response_is_recoverable() {
+        let err = error_for_code(-32801).await;
+        assert!(
+            matches!(err, crate::error::LspError::ContentModified { .. }),
+            "{err:?}"
+        );
+        assert!(err.is_recoverable());
+    }
+
+    #[tokio::test]
+    async fn other_rpc_errors_stay_non_recoverable() {
+        let err = error_for_code(-32601).await;
+        assert!(
+            matches!(err, crate::error::LspError::JsonRpc { .. }),
+            "{err:?}"
+        );
+        assert!(!err.is_recoverable());
     }
 }

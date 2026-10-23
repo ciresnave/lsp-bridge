@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0]
+
+### Fixed
+
+- `rootUri` and `workspaceFolders[].uri` in `initialize` were `"file://" + path.display()`: on Windows that is `file://C:\dir` (not a URI), so rust-analyzer never loaded the workspace and go-to-definition returned null. `utils::uri::from_path` now builds a percent-encoded `file:///C:/dir` URL via `Url::from_file_path` (relative paths are made absolute first) and `initialize` uses it.
+
+### Added
+
+- `LspError::ContentModified` (server error -32801). It is recoverable (`is_recoverable()`), so callers retry instead of treating a stale result as a failure.
+
+### Changed
+
+- **Breaking:** the new `LspError` variant makes exhaustive matches on `LspError` non-exhaustive; pre-1.0, so the minor moves: 0.4.0.
+
 ## [0.3.0]
 
 ### Added
