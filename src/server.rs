@@ -290,7 +290,7 @@ impl LspServer {
             "trace": self.config.trace,
             "workspaceFolders": self.config.workspace_folders.iter()
                 .map(|path| serde_json::json!({
-                    "uri": format!("file://{}", path.display()),
+                    "uri": crate::utils::uri::from_path(path),
                     "name": path.file_name().and_then(|n| n.to_str()).unwrap_or("workspace")
                 }))
                 .collect::<Vec<_>>()
@@ -298,7 +298,7 @@ impl LspServer {
 
         if let Some(root_path) = &self.config.root_path {
             params["rootPath"] = serde_json::json!(root_path);
-            params["rootUri"] = serde_json::json!(format!("file://{}", root_path.display()));
+            params["rootUri"] = serde_json::json!(crate::utils::uri::from_path(root_path));
         }
 
         if let Some(init_options) = &self.config.initialization_options {
@@ -377,6 +377,50 @@ mod tests {
         let server = LspServer::new("test", config);
         assert_eq!(server.id(), "test");
         assert_eq!(server.state().await, ServerState::Stopped);
+    }
+
+    /// A directory name with a space: `file://` + `display()` leaves the space unescaped, and on
+    /// Windows produces `file://C:\...` (no authority separator), which is not a URI.
+    fn spaced_dir() -> std::path::PathBuf {
+        std::env::temp_dir().join("lsp bridge root")
+    }
+
+    #[test]
+    fn initialize_params_root_uri_is_a_valid_file_uri() {
+        let dir = spaced_dir();
+        let config = LspServerConfig::new().command("echo").root_path(&dir);
+        let params = LspServer::new("t", config).build_initialize_params();
+
+        let uri = params["rootUri"].as_str().expect("rootUri");
+        let parsed = url::Url::parse(uri).expect("rootUri parses as a URL");
+        assert_eq!(parsed.scheme(), "file");
+        assert!(!uri.contains(' '), "unescaped space in {uri}");
+        assert_eq!(parsed.to_file_path().expect("file path"), dir);
+        if cfg!(windows) {
+            assert!(
+                uri.starts_with("file:///"),
+                "Windows URI needs three slashes: {uri}"
+            );
+        }
+    }
+
+    #[test]
+    fn initialize_params_workspace_folder_uri_is_a_valid_file_uri() {
+        let dir = spaced_dir();
+        let config = LspServerConfig::new()
+            .command("echo")
+            .workspace_folder(&dir);
+        let params = LspServer::new("t", config).build_initialize_params();
+
+        let folder = &params["workspaceFolders"][0];
+        let uri = folder["uri"].as_str().expect("uri");
+        assert!(
+            uri.starts_with("file:///") && !uri.contains(' ') && !uri.contains('\\'),
+            "{uri}"
+        );
+        let parsed = url::Url::parse(uri).expect("parses");
+        assert_eq!(parsed.to_file_path().expect("file path"), dir);
+        assert_eq!(folder["name"], "lsp bridge root");
     }
 
     #[test]

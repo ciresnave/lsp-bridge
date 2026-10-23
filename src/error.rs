@@ -97,6 +97,11 @@ pub enum LspError {
     #[error("JSON-RPC error: {message}")]
     JsonRpc { message: String },
 
+    /// The server answered `ContentModified` (-32801): the document changed while the request
+    /// ran, so the result is stale and the request should be retried.
+    #[error("Content modified: {message}")]
+    ContentModified { message: String },
+
     /// IO error
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -171,6 +176,13 @@ impl LspError {
         }
     }
 
+    /// Create a new content-modified error
+    pub fn content_modified<S: Into<String>>(message: S) -> Self {
+        Self::ContentModified {
+            message: message.into(),
+        }
+    }
+
     /// Create a new protocol error
     pub fn protocol<S: Into<String>>(message: S) -> Self {
         Self::Communication {
@@ -198,6 +210,7 @@ impl LspError {
             Self::ServerNotFound { .. } => false,
             Self::FeatureNotSupported { .. } => false,
             Self::JsonRpc { .. } => false,
+            Self::ContentModified { .. } => true,
             Self::Io(_) => true,
             Self::Serialization(_) => false,
             Self::Custom { .. } => false,
@@ -217,6 +230,7 @@ impl LspError {
             Self::ServerNotFound { .. } => ErrorSeverity::Medium,
             Self::FeatureNotSupported { .. } => ErrorSeverity::Low,
             Self::JsonRpc { .. } => ErrorSeverity::Medium,
+            Self::ContentModified { .. } => ErrorSeverity::Low,
             Self::Io(_) => ErrorSeverity::Medium,
             Self::Serialization(_) => ErrorSeverity::Medium,
             Self::Custom { .. } => ErrorSeverity::Medium,
@@ -263,6 +277,13 @@ mod tests {
 
         assert!(recoverable.is_recoverable());
         assert!(!non_recoverable.is_recoverable());
+    }
+
+    #[test]
+    fn test_content_modified_is_recoverable() {
+        let error = LspError::content_modified("document changed");
+        assert!(error.is_recoverable());
+        assert_eq!(error.severity(), ErrorSeverity::Low);
     }
 
     #[test]
