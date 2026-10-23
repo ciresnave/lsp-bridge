@@ -69,10 +69,10 @@ pub struct LspProcess {
 impl LspProcess {
     /// Creates a new LSP process from a spawned child process.
     ///
-    /// This function takes ownership of a spawned child process and sets up the 
+    /// This function takes ownership of a spawned child process and sets up the
     /// communication channels needed for LSP message exchange. It creates two
     /// asynchronous tasks:
-    /// 
+    ///
     /// 1. A writer task that sends messages to the server process
     /// 2. A reader task that reads and processes responses from the server
     ///
@@ -120,13 +120,15 @@ impl LspProcess {
         pending_requests: Arc<DashMap<RequestId, oneshot::Sender<Result<Value>>>>,
         server_id: String,
     ) -> Result<Self> {
-        let stdin = process.stdin.take().ok_or_else(|| {
-            LspError::communication("Process stdin not available")
-        })?;
-        
-        let stdout = process.stdout.take().ok_or_else(|| {
-            LspError::communication("Process stdout not available")
-        })?;
+        let stdin = process
+            .stdin
+            .take()
+            .ok_or_else(|| LspError::communication("Process stdin not available"))?;
+
+        let stdout = process
+            .stdout
+            .take()
+            .ok_or_else(|| LspError::communication("Process stdout not available"))?;
 
         let (message_tx, message_rx) = mpsc::unbounded_channel();
 
@@ -188,14 +190,15 @@ impl LspProcess {
     /// # }
     /// ```
     pub fn send_message(&self, message: LspMessage) -> Result<()> {
-        self.message_tx.send(message)
+        self.message_tx
+            .send(message)
             .map_err(|_| LspError::communication("Failed to send message to process").into())
     }
 
     /// Forcibly terminates the LSP server process.
     ///
     /// This method sends a kill signal to the LSP server process. It should
-    /// be used as a last resort when the server does not respond to the 
+    /// be used as a last resort when the server does not respond to the
     /// standard shutdown request.
     ///
     /// # Returns
@@ -222,7 +225,9 @@ impl LspProcess {
     /// # }
     /// ```
     pub async fn kill(&mut self) -> Result<()> {
-        self.process.kill().await
+        self.process
+            .kill()
+            .await
             .map_err(|e| LspError::communication(format!("Failed to kill process: {e}")).into())
     }
 
@@ -253,16 +258,18 @@ impl LspProcess {
     /// # }
     /// ```
     pub async fn wait(&mut self) -> Result<std::process::ExitStatus> {
-        self.process.wait().await
+        self.process
+            .wait()
+            .await
             .map_err(|e| LspError::communication(format!("Failed to wait for process: {e}")).into())
     }
 
     /// Check if the process is still running.
     pub fn is_running(&mut self) -> bool {
         match self.process.try_wait() {
-            Ok(None) => true,  // Still running
-            Ok(Some(_)) => false,  // Exited
-            Err(_) => false,  // Error, assume not running
+            Ok(None) => true,     // Still running
+            Ok(Some(_)) => false, // Exited
+            Err(_) => false,      // Error, assume not running
         }
     }
 
@@ -274,14 +281,14 @@ impl LspProcess {
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             let mut writer = BufWriter::new(stdin);
-            
+
             while let Some(message) = message_rx.recv().await {
                 if let Err(e) = Self::send_message_internal(&mut writer, &message).await {
                     error!("Failed to send message for server {}: {}", server_id, e);
                     break;
                 }
             }
-            
+
             debug!("Writer task completed for server {}", server_id);
         })
     }
@@ -294,12 +301,17 @@ impl LspProcess {
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             let mut reader = BufReader::new(stdout);
-            
+
             loop {
                 match Self::read_message_internal(&mut reader).await {
                     Ok(content) => {
-                        if let Err(e) = Self::handle_incoming_message(&content, &pending_requests).await {
-                            error!("Failed to handle incoming message for server {}: {}", server_id, e);
+                        if let Err(e) =
+                            Self::handle_incoming_message(&content, &pending_requests).await
+                        {
+                            error!(
+                                "Failed to handle incoming message for server {}: {}",
+                                server_id, e
+                            );
                         }
                     }
                     Err(e) => {
@@ -308,7 +320,7 @@ impl LspProcess {
                     }
                 }
             }
-            
+
             debug!("Reader task completed for server {}", server_id);
         })
     }
@@ -321,16 +333,22 @@ impl LspProcess {
         let json = serde_json::to_string(message)
             .map_err(|e| LspError::protocol(format!("Failed to serialize message: {e}")))?;
         let content_length = json.len();
-        
+
         // Write LSP headers
         let header = format!("Content-Length: {content_length}\r\n\r\n");
-        writer.write_all(header.as_bytes()).await
+        writer
+            .write_all(header.as_bytes())
+            .await
             .map_err(|e| LspError::communication(format!("Failed to write header: {e}")))?;
-        writer.write_all(json.as_bytes()).await
+        writer
+            .write_all(json.as_bytes())
+            .await
             .map_err(|e| LspError::communication(format!("Failed to write content: {e}")))?;
-        writer.flush().await
+        writer
+            .flush()
+            .await
             .map_err(|e| LspError::communication(format!("Failed to flush: {e}")))?;
-        
+
         debug!("Sent LSP message: {} bytes", content_length);
         Ok(())
     }
@@ -343,37 +361,41 @@ impl LspProcess {
         // Read headers
         let mut content_length = 0;
         let mut line = String::new();
-        
+
         loop {
             line.clear();
-            let bytes_read = reader.read_line(&mut line).await
+            let bytes_read = reader
+                .read_line(&mut line)
+                .await
                 .map_err(|e| LspError::communication(format!("Failed to read header line: {e}")))?;
-            
+
             if bytes_read == 0 {
                 return Err(LspError::communication("Unexpected end of stream").into());
             }
-            
+
             if line.trim().is_empty() {
                 break; // End of headers
             }
-            
+
             if let Some(length) = Self::parse_content_length(&line) {
                 content_length = length;
             }
         }
-        
+
         if content_length == 0 {
             return Err(LspError::protocol("No Content-Length header found").into());
         }
-        
+
         // Read content
         let mut content = vec![0u8; content_length];
-        reader.read_exact(&mut content).await
+        reader
+            .read_exact(&mut content)
+            .await
             .map_err(|e| LspError::communication(format!("Failed to read message content: {e}")))?;
-        
+
         let content_str = String::from_utf8(content)
             .map_err(|_| LspError::protocol("Invalid UTF-8 in message content"))?;
-        
+
         debug!("Received LSP message: {} bytes", content_length);
         Ok(content_str)
     }
@@ -381,12 +403,7 @@ impl LspProcess {
     /// Parse Content-Length header.
     pub fn parse_content_length(header: &str) -> Option<usize> {
         if header.starts_with("Content-Length:") {
-            header
-                .split(':')
-                .nth(1)?
-                .trim()
-                .parse()
-                .ok()
+            header.split(':').nth(1)?.trim().parse().ok()
         } else {
             None
         }
@@ -408,7 +425,7 @@ impl LspProcess {
                     } else {
                         Ok(response.result.unwrap_or(Value::Null))
                     };
-                    
+
                     let _ = sender.send(result);
                 } else {
                     debug!("Received response for unknown request: {:?}", response.id);
@@ -421,44 +438,66 @@ impl LspProcess {
                     "textDocument/publishDiagnostics" => {
                         info!("Received diagnostics notification");
                         // Parse and route diagnostics to registered handlers
-                        if let Some(params) = notification.params {
-                            if let Ok(diagnostics) = serde_json::from_value::<lsp_types::PublishDiagnosticsParams>(params) {
-                                debug!("Received {} diagnostics for {:?}", 
-                                       diagnostics.diagnostics.len(),
-                                       diagnostics.uri);
-                                // The diagnostics are stored in the response and will be handled
-                                // by the LspServer/LspClient that receives this response
-                            }
+                        if let Some(params) = notification.params
+                            && let Ok(diagnostics) = serde_json::from_value::<
+                                lsp_types::PublishDiagnosticsParams,
+                            >(params)
+                        {
+                            debug!(
+                                "Received {} diagnostics for {:?}",
+                                diagnostics.diagnostics.len(),
+                                diagnostics.uri
+                            );
+                            // The diagnostics are stored in the response and will be handled
+                            // by the LspServer/LspClient that receives this response
                         }
                     }
                     "window/logMessage" => {
-                        if let Some(params) = notification.params {
-                            if let Ok(log_msg) = serde_json::from_value::<lsp_types::LogMessageParams>(params) {
-                                match log_msg.typ {
-                                    lsp_types::MessageType::ERROR => error!("LSP Server: {}", log_msg.message),
-                                    lsp_types::MessageType::WARNING => warn!("LSP Server: {}", log_msg.message),
-                                    lsp_types::MessageType::INFO => info!("LSP Server: {}", log_msg.message),
-                                    lsp_types::MessageType::LOG => debug!("LSP Server: {}", log_msg.message),
-                                    _ => debug!("LSP Server: {}", log_msg.message),
+                        if let Some(params) = notification.params
+                            && let Ok(log_msg) =
+                                serde_json::from_value::<lsp_types::LogMessageParams>(params)
+                        {
+                            match log_msg.typ {
+                                lsp_types::MessageType::ERROR => {
+                                    error!("LSP Server: {}", log_msg.message)
                                 }
+                                lsp_types::MessageType::WARNING => {
+                                    warn!("LSP Server: {}", log_msg.message)
+                                }
+                                lsp_types::MessageType::INFO => {
+                                    info!("LSP Server: {}", log_msg.message)
+                                }
+                                lsp_types::MessageType::LOG => {
+                                    debug!("LSP Server: {}", log_msg.message)
+                                }
+                                _ => debug!("LSP Server: {}", log_msg.message),
                             }
                         }
                     }
                     "window/showMessage" => {
                         info!("Received show message notification");
                         // Parse and log window messages
-                        if let Some(params) = notification.params {
-                            if let Ok(msg) = serde_json::from_value::<lsp_types::ShowMessageParams>(params) {
-                                match msg.typ {
-                                    lsp_types::MessageType::ERROR => error!("LSP Server Message: {}", msg.message),
-                                    lsp_types::MessageType::WARNING => warn!("LSP Server Message: {}", msg.message),
-                                    lsp_types::MessageType::INFO => info!("LSP Server Message: {}", msg.message),
-                                    lsp_types::MessageType::LOG => debug!("LSP Server Message: {}", msg.message),
-                                    _ => debug!("LSP Server Message (unknown type): {}", msg.message),
+                        if let Some(params) = notification.params
+                            && let Ok(msg) =
+                                serde_json::from_value::<lsp_types::ShowMessageParams>(params)
+                        {
+                            match msg.typ {
+                                lsp_types::MessageType::ERROR => {
+                                    error!("LSP Server Message: {}", msg.message)
                                 }
-                                // The message is captured in logs and will be accessible to clients
-                                // that subscribe to the tracing events
+                                lsp_types::MessageType::WARNING => {
+                                    warn!("LSP Server Message: {}", msg.message)
+                                }
+                                lsp_types::MessageType::INFO => {
+                                    info!("LSP Server Message: {}", msg.message)
+                                }
+                                lsp_types::MessageType::LOG => {
+                                    debug!("LSP Server Message: {}", msg.message)
+                                }
+                                _ => debug!("LSP Server Message (unknown type): {}", msg.message),
                             }
+                            // The message is captured in logs and will be accessible to clients
+                            // that subscribe to the tracing events
                         }
                     }
                     _ => {
@@ -473,71 +512,82 @@ impl LspProcess {
                     "workspace/configuration" => {
                         debug!("Server requested workspace configuration");
                         // Extract configuration request items
-                        if let Some(params) = request.params {
-                            if let Ok(config_params) = serde_json::from_value::<lsp_types::ConfigurationParams>(params) {
-                                debug!("Server requested {} configuration items", config_params.items.len());
-                                
-                                // Create a response with empty configuration for each item
-                                // In a real implementation, this would pull from client's config
-                                let _config_items: Vec<serde_json::Value> = config_params.items
-                                    .iter()
-                                    .map(|_| serde_json::Value::Null)
-                                    .collect();
-                                
-                                // Return empty configuration values as default response
-                                // The actual handling of this would happen in the LspClient which
-                                // would need to register handlers for specific request types
-                                debug!("Responding with default configuration values");
-                            }
+                        if let Some(params) = request.params
+                            && let Ok(config_params) =
+                                serde_json::from_value::<lsp_types::ConfigurationParams>(params)
+                        {
+                            debug!(
+                                "Server requested {} configuration items",
+                                config_params.items.len()
+                            );
+
+                            // Create a response with empty configuration for each item
+                            // In a real implementation, this would pull from client's config
+                            let _config_items: Vec<serde_json::Value> = config_params
+                                .items
+                                .iter()
+                                .map(|_| serde_json::Value::Null)
+                                .collect();
+
+                            // Return empty configuration values as default response
+                            // The actual handling of this would happen in the LspClient which
+                            // would need to register handlers for specific request types
+                            debug!("Responding with default configuration values");
                         }
                     }
                     "client/registerCapability" => {
                         debug!("Server requested capability registration");
                         // Handle dynamic capability registration
-                        if let Some(params) = request.params {
-                            if let Ok(reg_params) = serde_json::from_value::<lsp_types::RegistrationParams>(params) {
-                                debug!("Server requested {} capability registrations", reg_params.registrations.len());
-                                
-                                // Log the requested registrations
-                                for registration in &reg_params.registrations {
-                                    debug!(
-                                        "Registration request: id={}, method={}, options={:?}",
-                                        registration.id,
-                                        registration.method,
-                                        registration.register_options
-                                    );
-                                }
-                                
-                                // In a full implementation, these would be stored and used
-                                // to route future notifications/requests
-                                debug!("Dynamic capability registration processed");
+                        if let Some(params) = request.params
+                            && let Ok(reg_params) =
+                                serde_json::from_value::<lsp_types::RegistrationParams>(params)
+                        {
+                            debug!(
+                                "Server requested {} capability registrations",
+                                reg_params.registrations.len()
+                            );
+
+                            // Log the requested registrations
+                            for registration in &reg_params.registrations {
+                                debug!(
+                                    "Registration request: id={}, method={}, options={:?}",
+                                    registration.id,
+                                    registration.method,
+                                    registration.register_options
+                                );
                             }
+
+                            // In a full implementation, these would be stored and used
+                            // to route future notifications/requests
+                            debug!("Dynamic capability registration processed");
                         }
                     }
                     "window/showMessageRequest" => {
                         debug!("Server requested user input");
                         // Process message request that needs user input
-                        if let Some(params) = request.params {
-                            if let Ok(msg_params) = serde_json::from_value::<lsp_types::ShowMessageRequestParams>(params.clone()) {
-                                info!(
-                                    "Message request from server: {} (options: {})",
-                                    msg_params.message,
-                                    msg_params.actions.as_ref().map_or(0, |a| a.len())
-                                );
-                                
-                                // In a real UI integration, we would show a dialog here
-                                // For now, we'll just auto-select the first option if available
-                                let _response = match msg_params.actions {
-                                    Some(actions) if !actions.is_empty() => {
-                                        serde_json::to_value(&actions[0]).unwrap_or(Value::Null)
-                                    }
-                                    _ => Value::Null,
-                                };
-                                
-                                debug!("Auto-responding to message request with first option");
-                                // The actual sending of the response would happen in the client
-                                // that processes this request
-                            }
+                        if let Some(params) = request.params
+                            && let Ok(msg_params) = serde_json::from_value::<
+                                lsp_types::ShowMessageRequestParams,
+                            >(params.clone())
+                        {
+                            info!(
+                                "Message request from server: {} (options: {})",
+                                msg_params.message,
+                                msg_params.actions.as_ref().map_or(0, |a| a.len())
+                            );
+
+                            // In a real UI integration, we would show a dialog here
+                            // For now, we'll just auto-select the first option if available
+                            let _response = match msg_params.actions {
+                                Some(actions) if !actions.is_empty() => {
+                                    serde_json::to_value(&actions[0]).unwrap_or(Value::Null)
+                                }
+                                _ => Value::Null,
+                            };
+
+                            debug!("Auto-responding to message request with first option");
+                            // The actual sending of the response would happen in the client
+                            // that processes this request
                         }
                     }
                     _ => {

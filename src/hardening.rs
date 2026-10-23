@@ -6,8 +6,8 @@
 use crate::error::{LspBridgeError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, Semaphore};
 use tokio::time::{sleep, timeout};
@@ -555,14 +555,14 @@ impl InputValidator {
         }
 
         // Validate JSON structure if applicable
-        if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(input) {
-            if Self::get_json_depth(&json_value) > self.config.max_json_depth {
-                errors.push(format!(
-                    "JSON structure exceeds maximum depth of {}",
-                    self.config.max_json_depth
-                ));
-                is_valid = false;
-            }
+        if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(input)
+            && Self::get_json_depth(&json_value) > self.config.max_json_depth
+        {
+            errors.push(format!(
+                "JSON structure exceeds maximum depth of {}",
+                self.config.max_json_depth
+            ));
+            is_valid = false;
         }
 
         // Basic sanitization

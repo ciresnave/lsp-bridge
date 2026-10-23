@@ -5,8 +5,8 @@ use crate::protocol::DocumentState;
 use crate::server::{LspServer, ServerId};
 use dashmap::DashMap;
 use lsp_types::*;
-use std::sync::Arc;
 use std::str::FromStr;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
@@ -50,15 +50,21 @@ impl LspClient {
         if let Some((_, server)) = self.servers.remove(server_id) {
             // Check server state before attempting shutdown
             let state = server.read().await.state().await;
-            
+
             // Only attempt graceful shutdown for running servers
-            if matches!(state, crate::server::ServerState::Ready | crate::server::ServerState::Starting | crate::server::ServerState::Initializing) {
+            if matches!(
+                state,
+                crate::server::ServerState::Ready
+                    | crate::server::ServerState::Starting
+                    | crate::server::ServerState::Initializing
+            ) {
                 // Use shorter timeout to prevent hanging in tests
                 let stop_result = tokio::time::timeout(
                     std::time::Duration::from_secs(3),
-                    server.write().await.stop()
-                ).await;
-                
+                    server.write().await.stop(),
+                )
+                .await;
+
                 match stop_result {
                     Ok(Ok(())) => debug!("Server {server_id} stopped cleanly"),
                     Ok(Err(e)) => warn!("Error stopping server {server_id}: {e}"),
@@ -78,7 +84,7 @@ impl LspClient {
                 false
             }
         }; // Read lock is dropped here
-        
+
         if should_clear_active {
             *self.active_server.write().await = None;
         }
@@ -93,10 +99,10 @@ impl LspClient {
 
     /// Set the active server.
     pub async fn set_active_server(&self, server_id: Option<ServerId>) -> Result<()> {
-        if let Some(id) = &server_id {
-            if !self.servers.contains_key(id) {
-                return Err(LspError::server_not_found(id).into());
-            }
+        if let Some(id) = &server_id
+            && !self.servers.contains_key(id)
+        {
+            return Err(LspError::server_not_found(id).into());
         }
 
         *self.active_server.write().await = server_id;
@@ -480,7 +486,10 @@ impl LspClient {
 
     /// List all registered server IDs.
     pub fn list_servers(&self) -> Vec<String> {
-        self.servers.iter().map(|entry| entry.key().clone()).collect()
+        self.servers
+            .iter()
+            .map(|entry| entry.key().clone())
+            .collect()
     }
 
     /// Get document count.
@@ -590,27 +599,32 @@ impl LspClient {
             // We'll try DocumentSymbol first, then fall back to SymbolInformation
             if let Ok(symbols) = serde_json::from_value::<Vec<DocumentSymbol>>(response.clone()) {
                 Ok(symbols)
-            } else if let Ok(symbol_info) = serde_json::from_value::<Vec<SymbolInformation>>(response) {
+            } else if let Ok(symbol_info) =
+                serde_json::from_value::<Vec<SymbolInformation>>(response)
+            {
                 // Convert SymbolInformation to DocumentSymbol
-                Ok(symbol_info.into_iter().map(|info| {
-                    // Convert deprecated field to tags if needed
-                    let mut tags = info.tags.unwrap_or_default();
-                    #[allow(deprecated)]
-                    if info.deprecated.unwrap_or(false) {
-                        tags.push(SymbolTag::DEPRECATED);
-                    }
-                    
-                    DocumentSymbol {
-                        name: info.name,
-                        detail: None,
-                        kind: info.kind,
-                        tags: Some(tags),
-                        deprecated: None,
-                        range: info.location.range,
-                        selection_range: info.location.range,
-                        children: None,
-                    }
-                }).collect())
+                Ok(symbol_info
+                    .into_iter()
+                    .map(|info| {
+                        // Convert deprecated field to tags if needed
+                        let mut tags = info.tags.unwrap_or_default();
+                        #[allow(deprecated)]
+                        if info.deprecated.unwrap_or(false) {
+                            tags.push(SymbolTag::DEPRECATED);
+                        }
+
+                        DocumentSymbol {
+                            name: info.name,
+                            detail: None,
+                            kind: info.kind,
+                            tags: Some(tags),
+                            deprecated: None,
+                            range: info.location.range,
+                            selection_range: info.location.range,
+                            children: None,
+                        }
+                    })
+                    .collect())
             } else {
                 Ok(vec![])
             }
@@ -847,11 +861,7 @@ impl LspClient {
     }
 
     /// Get code lens for a document.
-    pub async fn get_code_lens(
-        &self,
-        server_id: &str,
-        uri: &str,
-    ) -> Result<Option<Vec<CodeLens>>> {
+    pub async fn get_code_lens(&self, server_id: &str, uri: &str) -> Result<Option<Vec<CodeLens>>> {
         let server = self
             .get_server(server_id)
             .ok_or_else(|| LspError::server_not_found(server_id))?;
@@ -1454,11 +1464,7 @@ impl LspClient {
     }
 
     /// Resolve inlay hint.
-    pub async fn resolve_inlay_hint(
-        &self,
-        server_id: &str,
-        hint: InlayHint,
-    ) -> Result<InlayHint> {
+    pub async fn resolve_inlay_hint(&self, server_id: &str, hint: InlayHint) -> Result<InlayHint> {
         let server = self
             .get_server(server_id)
             .ok_or_else(|| LspError::server_not_found(server_id))?;

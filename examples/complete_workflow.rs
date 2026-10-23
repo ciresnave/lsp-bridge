@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::fs;
-use tracing::{info, warn, Level};
+use tracing::{Level, info, warn};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a temporary workspace for testing
     let temp_dir = setup_test_workspace().await?;
     let workspace_path = temp_dir.path().to_path_buf();
-    
+
     // Create LSP Bridge
     let mut bridge = LspBridge::new();
     info!("✅ LSP Bridge created successfully");
@@ -123,7 +123,7 @@ async fn demonstrate_real_workflow(
     workspace_path: PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("🔧 Configuring rust-analyzer server");
-    
+
     // Configure rust-analyzer
     let config = LspServerConfig::new()
         .command("rust-analyzer")
@@ -149,7 +149,9 @@ async fn demonstrate_real_workflow(
     let file_content = fs::read_to_string(&file_path).await?;
 
     info!("📖 Opening document: {}", file_uri);
-    bridge.open_document(&server_id, &file_uri, &file_content).await?;
+    bridge
+        .open_document(&server_id, &file_uri, &file_content)
+        .await?;
 
     // Allow processing time
     tokio::time::sleep(Duration::from_secs(2)).await;
@@ -159,7 +161,10 @@ async fn demonstrate_real_workflow(
 
     // 1. Hover information
     info!("  • Testing hover on 'User' struct");
-    match bridge.get_hover(&server_id, &file_uri, Position::new(4, 12)).await {
+    match bridge
+        .get_hover(&server_id, &file_uri, Position::new(4, 12))
+        .await
+    {
         Ok(Some(_hover)) => {
             info!("    ✅ Hover successful: got hover information");
         }
@@ -169,12 +174,20 @@ async fn demonstrate_real_workflow(
 
     // 2. Completions
     info!("  • Testing completions in impl block");
-    match bridge.get_completions(&server_id, &file_uri, Position::new(15, 20)).await {
+    match bridge
+        .get_completions(&server_id, &file_uri, Position::new(15, 20))
+        .await
+    {
         Ok(completions) => {
             info!("    ✅ Found {} completion items", completions.len());
             for (i, item) in completions.iter().take(3).enumerate() {
-                info!("      {}. {} ({})", i + 1, item.label, 
-                      item.kind.map_or("unknown".to_string(), |k| format!("{k:?}")));
+                info!(
+                    "      {}. {} ({})",
+                    i + 1,
+                    item.label,
+                    item.kind
+                        .map_or("unknown".to_string(), |k| format!("{k:?}"))
+                );
             }
         }
         Err(e) => warn!("    ⚠️ Completions failed: {}", e),
@@ -182,10 +195,15 @@ async fn demonstrate_real_workflow(
 
     // 3. Go to definition
     info!("  • Testing go-to-definition on method call");
-    match bridge.go_to_definition(&server_id, &file_uri, Position::new(32, 25)).await {
+    match bridge
+        .go_to_definition(&server_id, &file_uri, Position::new(32, 25))
+        .await
+    {
         Ok(Some(location)) => {
-            info!("    ✅ Found definition at: {:?}:{}", 
-                  location.uri, location.range.start.line);
+            info!(
+                "    ✅ Found definition at: {:?}:{}",
+                location.uri, location.range.start.line
+            );
         }
         Ok(None) => info!("    ℹ️ No definition found"),
         Err(e) => warn!("    ⚠️ Go-to-definition failed: {}", e),
@@ -233,12 +251,16 @@ async fn demonstrate_mock_workflow(
     // Show server information
     info!("📊 Bridge statistics:");
     info!("  • Server count: {}", bridge.server_count());
-    info!("  • Has server '{}': {}", server_id, bridge.has_server(&server_id));
+    info!(
+        "  • Has server '{}': {}",
+        server_id,
+        bridge.has_server(&server_id)
+    );
     info!("  • All servers: {:?}", bridge.list_servers());
 
     // Attempting to start would fail, so we just demonstrate the configuration
     info!("⚠️ Would attempt to start server, but mock-lsp-server doesn't exist");
-    
+
     // Show what a real workflow would look like
     info!("📋 In a real scenario, you would:");
     info!("  1. bridge.start_server(&server_id).await?");

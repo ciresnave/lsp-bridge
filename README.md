@@ -3,7 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/lsp-bridge.svg)](https://crates.io/crates/lsp-bridge)
 [![Documentation](https://docs.rs/lsp-bridge/badge.svg)](https://docs.rs/lsp-bridge)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
-[![Build Status](https://github.com/your-username/lsp-bridge/workflows/CI/badge.svg)](https://github.com/your-username/lsp-bridge/actions)
+[![Build Status](https://github.com/ciresnave/lsp-bridge/workflows/CI/badge.svg)](https://github.com/ciresnave/lsp-bridge/actions)
 
 A comprehensive Rust library that provides a bridge between Language Server Protocol (LSP) servers and clients. It simplifies the integration of LSP capabilities into applications, tools, and IDEs by handling the complexity of protocol communication, lifecycle management, and feature negotiation.
 
@@ -29,7 +29,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lsp-bridge = "0.1"
+lsp-bridge = "0.2"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -469,7 +469,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for deta
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/your-username/lsp-bridge.git
+   git clone https://github.com/ciresnave/lsp-bridge.git
    cd lsp-bridge
    ```
 

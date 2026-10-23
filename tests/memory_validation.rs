@@ -4,8 +4,8 @@
 //! and leak detection in the LSP Bridge.
 
 use lsp_bridge::{LspBridge, LspServerConfig};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use tempfile::TempDir;
 use tokio::fs;
@@ -325,10 +325,7 @@ async fn test_memory_stress_conditions() {
     );
 
     // Performance assertions
-    assert!(
-        peak_memory < 200,
-        "Peak memory too high: {peak_memory} MB"
-    );
+    assert!(peak_memory < 200, "Peak memory too high: {peak_memory} MB");
     assert!(
         final_active == 0,
         "Resources not properly cleaned up: {final_active}"
@@ -436,16 +433,12 @@ async fn test_error_condition_cleanup() {
         if i % 3 == 2 {
             // Simulate error handling and partial cleanup
             tracker.track_deallocation();
-            println!(
-                "   Simulated error at operation {i}, cleaned up 1 resource"
-            );
+            println!("   Simulated error at operation {i}, cleaned up 1 resource");
         }
     }
 
     let active_before_error_recovery = tracker.get_active_resources();
-    println!(
-        "   Active resources before error recovery: {active_before_error_recovery}"
-    );
+    println!("   Active resources before error recovery: {active_before_error_recovery}");
 
     // Simulate error recovery and full cleanup
     let remaining = active_before_error_recovery;

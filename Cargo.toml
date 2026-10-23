@@ -1,7 +1,8 @@
 [package]
 name = "lsp-bridge"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
+rust-version = "1.89"
 description = "A comprehensive Rust library that provides a bridge between Language Server Protocol (LSP) servers and clients"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/ciresnave/lsp-bridge"
@@ -39,15 +40,15 @@ futures = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.0", features = ["v4"] }
-rand = "0.9"
+rand = "0.10"
 url = "2.4"
 
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.8"
-criterion = { version = "0.6", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
 tokio = { version = "1.0", features = ["test-util", "macros"] }
-rand = "0.9"
+rand = "0.10"
 
 [[bench]]
 name = "performance"

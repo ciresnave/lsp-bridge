@@ -260,7 +260,7 @@ mod tests {
     fn test_error_recoverable() {
         let recoverable = LspError::server_crash("test-server");
         let non_recoverable = LspError::invalid_configuration("bad config");
-        
+
         assert!(recoverable.is_recoverable());
         assert!(!non_recoverable.is_recoverable());
     }

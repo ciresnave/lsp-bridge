@@ -1,5 +1,5 @@
-use lsp_bridge::prelude::*;
 use lsp_bridge::LspClientCapabilities;
+use lsp_bridge::prelude::*;
 use std::time::Duration;
 
 #[test]

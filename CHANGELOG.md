@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1]
+
+### Changed
+
+- Minimum supported Rust version is now declared: `rust-version = "1.89"` (edition 2024; `uuid` needs 1.89).
+- Dev/runtime dependencies updated: `rand` 0.10, `criterion` 0.8 (dev); lockfile refreshed.
+- CI gains an MSRV job (1.89).
+
+### Fixed
+
+- README quick-start pinned `lsp-bridge = "0.1"`; it now says `"0.2"`.
+- README CI badge and clone URL pointed at `your-username/lsp-bridge`; they now point at `ciresnave/lsp-bridge`.
+
 ### Added
 
 - Complete implementation of LSP 3.17 specification

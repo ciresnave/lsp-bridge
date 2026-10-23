@@ -82,11 +82,7 @@ impl FeatureManager {
             .iter()
             .filter_map(
                 |(feature, &enabled)| {
-                    if enabled {
-                        Some(feature.clone())
-                    } else {
-                        None
-                    }
+                    if enabled { Some(feature.clone()) } else { None }
                 },
             )
             .collect()
@@ -427,18 +423,24 @@ async fn test_compatibility_checking() {
     );
 
     // Verify compatibility analysis
-    assert!(report
-        .compatible_features
-        .contains(&"completion".to_string()));
+    assert!(
+        report
+            .compatible_features
+            .contains(&"completion".to_string())
+    );
     assert!(report.compatible_features.contains(&"hover".to_string()));
-    assert!(report
-        .compatible_features
-        .contains(&"goto_definition".to_string()));
+    assert!(
+        report
+            .compatible_features
+            .contains(&"goto_definition".to_string())
+    );
 
     // Should detect that client doesn't support references
-    assert!(report
-        .missing_client_features
-        .contains(&"find_references".to_string()));
+    assert!(
+        report
+            .missing_client_features
+            .contains(&"find_references".to_string())
+    );
 
     // Compatibility score should be reasonable
     let score = report.compatibility_score();
@@ -590,9 +592,7 @@ fn test_build_configuration_features() {
     }
 
     println!("📦 Build configuration:");
-    println!(
-        "   Available features: {feature_count} ({available_features:?})"
-    );
+    println!("   Available features: {feature_count} ({available_features:?})");
 
     // With default features, we should have at least the core ones
     #[cfg(feature = "default")]

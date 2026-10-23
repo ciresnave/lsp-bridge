@@ -676,15 +676,11 @@ async fn test_memory_usage_over_time() {
         let current_memory = measure_memory_usage();
         let memory_increase = current_memory - initial_memory;
 
-        println!(
-            "  Iteration {i}: {current_memory:.1} MB (+{memory_increase:.1} MB)"
-        );
+        println!("  Iteration {i}: {current_memory:.1} MB (+{memory_increase:.1} MB)");
 
         // Check for memory leaks (in real implementation)
         if memory_increase > 100.0 {
-            eprintln!(
-                "⚠ Potential memory leak detected: +{memory_increase:.1} MB"
-            );
+            eprintln!("⚠ Potential memory leak detected: +{memory_increase:.1} MB");
         }
     }
 
