@@ -369,6 +369,7 @@ impl LspBridge {
         }
     }
 
+    /// Get the declaration location of the symbol at a position, first result if the server returns several.
     pub async fn get_declaration(
         &self,
         server_id: &str,

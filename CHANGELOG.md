@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0]
+
+### Added
+
+- `LspClient::get_declaration` and `LspBridge::get_declaration` (`textDocument/declaration`). Thanks to Olaf Leidinger (#2).
+
+### Changed
+
+- **Breaking:** `LspBridge::find_references` takes an `include_declaration: bool` and forwards it to the client (it was hard-coded to `false`; `docs/PRODUCTION_GUIDE.md` already showed the four-argument call).
+
 ## [0.2.1]
 
 ### Changed

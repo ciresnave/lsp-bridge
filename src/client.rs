@@ -821,6 +821,7 @@ impl LspClient {
         }
     }
 
+    /// Request the declaration of the symbol at a position (`textDocument/declaration`).
     pub async fn get_declaration(
         &self,
         server_id: &str,
