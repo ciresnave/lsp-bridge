@@ -407,12 +407,11 @@ pub mod utils {
 
     /// Convert an LSP URI to a file path.
     pub fn uri_to_path(uri: &str) -> Result<std::path::PathBuf> {
-        if let Ok(url) = url::Url::parse(uri) {
-            if url.scheme() == "file" {
-                if let Ok(path) = url.to_file_path() {
-                    return Ok(path);
-                }
-            }
+        if let Ok(url) = url::Url::parse(uri)
+            && url.scheme() == "file"
+            && let Ok(path) = url.to_file_path()
+        {
+            return Ok(path);
         }
         Err(LspError::invalid_uri(uri).into())
     }

@@ -8,7 +8,7 @@ use lsp_types::*;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 use tokio::fs;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 /// Test configuration for real LSP servers
 struct TestLSPServer {
@@ -26,26 +26,24 @@ impl TestLSPServer {
             .arg("--version")
             .output()
             .await;
-        
+
         if version_check.is_ok() {
             return true;
         }
-        
+
         // Fallback to help flag
         let help_check = tokio::process::Command::new(self.command)
             .arg("--help")
             .output()
             .await;
-        
+
         if help_check.is_ok() {
             return true;
         }
-        
+
         // Final fallback - try to execute the command without args
-        let basic_check = tokio::process::Command::new(self.command)
-            .output()
-            .await;
-        
+        let basic_check = tokio::process::Command::new(self.command).output().await;
+
         basic_check.is_ok()
     }
 
@@ -202,8 +200,10 @@ async fn test_rust_analyzer_integration() {
             .register_server("rust-analyzer", config)
             .await
             .map_err(|e| format!("Failed to register server: {e}"))?;
-        
-        bridge.start_server(&server_id).await
+
+        bridge
+            .start_server(&server_id)
+            .await
             .map_err(|e| format!("Failed to start server: {e}"))?;
 
         // Allow server to initialize
@@ -211,8 +211,8 @@ async fn test_rust_analyzer_integration() {
 
         // Test document synchronization
         let file_path = workspace_path.join("src/main.rs");
-        let file_content = std::fs::read_to_string(&file_path)
-            .map_err(|e| format!("Failed to read file: {e}"))?;
+        let file_content =
+            std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
         bridge
             .open_document(
@@ -255,9 +255,11 @@ async fn test_rust_analyzer_integration() {
         }
 
         // Shutdown cleanly
-        bridge.stop_server(&server_id).await
+        bridge
+            .stop_server(&server_id)
+            .await
             .map_err(|e| format!("Failed to stop server: {e}"))?;
-        
+
         Ok::<(), String>(())
     })
     .await;
@@ -301,15 +303,17 @@ async fn test_typescript_language_server_integration() {
             .register_server("typescript-language-server", config)
             .await
             .map_err(|e| format!("Failed to register server: {e}"))?;
-        bridge.start_server(&server_id).await
+        bridge
+            .start_server(&server_id)
+            .await
             .map_err(|e| format!("Failed to start server: {e}"))?;
 
         tokio::time::sleep(Duration::from_secs(5)).await;
 
         // Test document operations
         let file_path = workspace_path.join("src/index.ts");
-        let file_content = std::fs::read_to_string(&file_path)
-            .map_err(|e| format!("Failed to read file: {e}"))?;
+        let file_content =
+            std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
         bridge
             .open_document(
@@ -336,9 +340,11 @@ async fn test_typescript_language_server_integration() {
             Err(e) => println!("⚠ Go-to-definition failed: {e}"),
         }
 
-        bridge.stop_server(&server_id).await
+        bridge
+            .stop_server(&server_id)
+            .await
             .map_err(|e| format!("Failed to stop server: {e}"))?;
-        
+
         Ok::<(), String>(())
     })
     .await;
@@ -386,15 +392,13 @@ async fn test_multiple_lsp_servers() {
         if rust_server.is_available().await {
             let config = rust_server.to_config(&workspace_path);
             match bridge.register_server("rust-analyzer", config).await {
-                Ok(server_id) => {
-                    match bridge.start_server(&server_id).await {
-                        Ok(_) => {
-                            server_ids.push(server_id);
-                            println!("✓ rust-analyzer started successfully");
-                        }
-                        Err(e) => println!("⚠ Failed to start rust-analyzer: {e}"),
+                Ok(server_id) => match bridge.start_server(&server_id).await {
+                    Ok(_) => {
+                        server_ids.push(server_id);
+                        println!("✓ rust-analyzer started successfully");
                     }
-                }
+                    Err(e) => println!("⚠ Failed to start rust-analyzer: {e}"),
+                },
                 Err(e) => println!("⚠ Failed to register rust-analyzer: {e}"),
             }
         } else {
@@ -403,16 +407,17 @@ async fn test_multiple_lsp_servers() {
 
         if ts_server.is_available().await {
             let config = ts_server.to_config(&workspace_path);
-            match bridge.register_server("typescript-language-server", config).await {
-                Ok(server_id) => {
-                    match bridge.start_server(&server_id).await {
-                        Ok(_) => {
-                            server_ids.push(server_id);
-                            println!("✓ typescript-language-server started successfully");
-                        }
-                        Err(e) => println!("⚠ Failed to start typescript-language-server: {e}"),
+            match bridge
+                .register_server("typescript-language-server", config)
+                .await
+            {
+                Ok(server_id) => match bridge.start_server(&server_id).await {
+                    Ok(_) => {
+                        server_ids.push(server_id);
+                        println!("✓ typescript-language-server started successfully");
                     }
-                }
+                    Err(e) => println!("⚠ Failed to start typescript-language-server: {e}"),
+                },
                 Err(e) => println!("⚠ Failed to register typescript-language-server: {e}"),
             }
         } else {
@@ -436,7 +441,7 @@ async fn test_multiple_lsp_servers() {
                 Err(e) => println!("⚠ Failed to stop server: {e}"),
             }
         }
-        
+
         Ok(())
     })
     .await;
@@ -448,10 +453,13 @@ async fn test_multiple_lsp_servers() {
             // Don't panic - just report the issue
         }
         Err(_) => {
-            eprintln!("Multi-server test timed out - this is expected if LSP servers are not installed");
+            eprintln!(
+                "Multi-server test timed out - this is expected if LSP servers are not installed"
+            );
             // Don't panic - just report the timeout
-        }        }
+        }
     }
+}
 
 /// Test resource cleanup after server crash simulation
 #[tokio::test]

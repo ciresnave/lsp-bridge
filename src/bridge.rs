@@ -382,11 +382,7 @@ impl LspBridge {
     }
 
     /// Get code lens for a document.
-    pub async fn get_code_lens(
-        &self,
-        server_id: &str,
-        uri: &str,
-    ) -> Result<Vec<CodeLens>> {
+    pub async fn get_code_lens(&self, server_id: &str, uri: &str) -> Result<Vec<CodeLens>> {
         self.client
             .get_code_lens(server_id, uri)
             .await
@@ -609,11 +605,7 @@ impl LspBridge {
     }
 
     /// Resolve inlay hint.
-    pub async fn resolve_inlay_hint(
-        &self,
-        server_id: &str,
-        hint: InlayHint,
-    ) -> Result<InlayHint> {
+    pub async fn resolve_inlay_hint(&self, server_id: &str, hint: InlayHint) -> Result<InlayHint> {
         self.client.resolve_inlay_hint(server_id, hint).await
     }
 
@@ -710,7 +702,9 @@ impl LspBridge {
         uri: &str,
         position: Position,
     ) -> Result<Option<SignatureHelp>> {
-        self.client.get_signature_help(server_id, uri, position).await
+        self.client
+            .get_signature_help(server_id, uri, position)
+            .await
     }
 
     /// Get document symbols.
@@ -739,7 +733,9 @@ impl LspBridge {
         range: Range,
         context: CodeActionContext,
     ) -> Result<Vec<CodeActionOrCommand>> {
-        self.client.get_code_actions(server_id, uri, range, context).await
+        self.client
+            .get_code_actions(server_id, uri, range, context)
+            .await
     }
 
     /// Rename a symbol.
@@ -750,7 +746,9 @@ impl LspBridge {
         position: Position,
         new_name: &str,
     ) -> Result<Option<WorkspaceEdit>> {
-        self.client.rename_symbol(server_id, uri, position, new_name).await
+        self.client
+            .rename_symbol(server_id, uri, position, new_name)
+            .await
     }
 
     /// Apply text edits to content and return the result.

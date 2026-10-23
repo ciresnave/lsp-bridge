@@ -138,7 +138,7 @@
 //!     bridge.open_document(&ts_id, "file:///project/index.ts", "console.log('hi')").await?;
 //!     
 //!     // Get language-specific features
-//!     let rust_hover = bridge.get_hover(&rust_id, "file:///project/src/main.rs", 
+//!     let rust_hover = bridge.get_hover(&rust_id, "file:///project/src/main.rs",
 //!                                       lsp_types::Position::new(0, 3)).await?;
 //!     let ts_completions = bridge.get_completions(&ts_id, "file:///project/index.ts",
 //!                                                  lsp_types::Position::new(0, 8)).await?;
@@ -273,8 +273,8 @@ pub use server::{LspServer, LspServerManager};
 /// Prelude module for common imports
 pub mod prelude {
     pub use crate::{
-        protocol::*, server::ServerState, LspBridge, LspClientCapabilities, LspError, LspServer,
-        LspServerConfig, Result,
+        LspBridge, LspClientCapabilities, LspError, LspServer, LspServerConfig, Result,
+        protocol::*, server::ServerState,
     };
     pub use lsp_types::{
         ClientCapabilities, CodeActionParams, CompletionItem, CompletionParams, Diagnostic,

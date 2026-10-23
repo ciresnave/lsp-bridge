@@ -3,16 +3,14 @@
 use crate::config::LspServerConfig;
 use crate::error::{LspError, Result};
 use crate::process::LspProcess;
-use crate::protocol::{
-    LspMessage, LspRequest, LspNotification, RequestId, ServerCapabilities,
-};
+use crate::protocol::{LspMessage, LspNotification, LspRequest, RequestId, ServerCapabilities};
 use async_trait::async_trait;
 use dashmap::DashMap;
 use serde_json::Value;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::process::Command;
-use tokio::sync::{oneshot, RwLock};
+use tokio::sync::{RwLock, oneshot};
 use tokio::time::timeout;
 use tracing::{info, warn};
 
@@ -99,7 +97,8 @@ impl LspServer {
             return Err(LspError::server_startup(format!(
                 "Server {0} is not in a startable state: {1:?}",
                 self.id, current_state
-            )).into());
+            ))
+            .into());
         }
 
         info!("Starting LSP server: {0}", self.id);
@@ -112,7 +111,7 @@ impl LspServer {
             self.pending_requests.clone(),
             self.id.clone(),
         )?;
-        
+
         *self.process.write().await = Some(lsp_process);
 
         // Initialize the server
@@ -135,10 +134,10 @@ impl LspServer {
         }
 
         // Kill the process if it's still running
-        if let Some(mut process) = self.process.write().await.take() {
-            if let Err(e) = process.kill().await {
-                warn!("Error killing server process: {0}", e);
-            }
+        if let Some(mut process) = self.process.write().await.take()
+            && let Err(e) = process.kill().await
+        {
+            warn!("Error killing server process: {0}", e);
         }
 
         *self.state.write().await = ServerState::Stopped;
@@ -159,7 +158,8 @@ impl LspServer {
             return Err(LspError::server_startup(format!(
                 "Maximum restart attempts ({0}) exceeded for server {1}",
                 self.config.max_restart_attempts, self.id
-            )).into());
+            ))
+            .into());
         }
 
         // Check restart delay
@@ -191,7 +191,7 @@ impl LspServer {
 
         let request = LspRequest::new(method, params);
         let request_id = request.id.clone();
-        
+
         let (tx, rx) = oneshot::channel();
         self.pending_requests.insert(request_id.clone(), tx);
 
@@ -235,7 +235,7 @@ impl LspServer {
     async fn spawn_process(&self) -> Result<tokio::process::Child> {
         let mut command = Command::new(&self.config.command);
         command.args(&self.config.args);
-        
+
         if let Some(work_dir) = &self.config.working_directory {
             command.current_dir(work_dir);
         }
@@ -250,7 +250,8 @@ impl LspServer {
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true);
 
-        command.spawn()
+        command
+            .spawn()
             .map_err(|e| LspError::server_startup(format!("Failed to spawn process: {e}")).into())
     }
 
@@ -259,16 +260,20 @@ impl LspServer {
         *self.state.write().await = ServerState::Initializing;
 
         let init_params = self.build_initialize_params();
-        let response = self.request("initialize".to_string(), Some(init_params)).await?;
+        let response = self
+            .request("initialize".to_string(), Some(init_params))
+            .await?;
 
         // Parse server capabilities
         if let Some(result) = response.get("capabilities") {
-            let capabilities: lsp_types::ServerCapabilities = serde_json::from_value(result.clone())?;
+            let capabilities: lsp_types::ServerCapabilities =
+                serde_json::from_value(result.clone())?;
             *self.capabilities.write().await = Some(ServerCapabilities::new(capabilities));
         }
 
         // Send initialized notification
-        self.notify("initialized".to_string(), Some(serde_json::json!({}))).await?;
+        self.notify("initialized".to_string(), Some(serde_json::json!({})))
+            .await?;
 
         Ok(())
     }
@@ -313,12 +318,9 @@ impl LspServer {
                 let _ = self.request("shutdown".to_string(), None).await;
                 let _ = self.notify("exit".to_string(), None).await;
             };
-            
+
             // Use a short timeout to prevent hanging during shutdown
-            let _ = tokio::time::timeout(
-                std::time::Duration::from_secs(2),
-                shutdown_future
-            ).await;
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(2), shutdown_future).await;
         }
 
         Ok(())
@@ -330,24 +332,34 @@ impl LspServer {
 pub trait LspServerManager {
     /// Start a server.
     async fn start_server(&mut self, server_id: &str) -> Result<()>;
-    
+
     /// Stop a server.
     async fn stop_server(&mut self, server_id: &str) -> Result<()>;
-    
+
     /// Restart a server.
     async fn restart_server(&mut self, server_id: &str) -> Result<()>;
-    
+
     /// Get server state.
     async fn server_state(&self, server_id: &str) -> Result<ServerState>;
-    
+
     /// Get server capabilities.
     async fn server_capabilities(&self, server_id: &str) -> Result<ServerCapabilities>;
-    
+
     /// Send request to server.
-    async fn server_request(&self, server_id: &str, method: String, params: Option<Value>) -> Result<Value>;
-    
+    async fn server_request(
+        &self,
+        server_id: &str,
+        method: String,
+        params: Option<Value>,
+    ) -> Result<Value>;
+
     /// Send notification to server.
-    async fn server_notify(&self, server_id: &str, method: String, params: Option<Value>) -> Result<()>;
+    async fn server_notify(
+        &self,
+        server_id: &str,
+        method: String,
+        params: Option<Value>,
+    ) -> Result<()>;
 }
 
 #[cfg(test)]
@@ -361,7 +373,7 @@ mod tests {
         let config = LspServerConfig::new()
             .command("echo")
             .startup_timeout(Duration::from_secs(5));
-        
+
         let server = LspServer::new("test", config);
         assert_eq!(server.id(), "test");
         assert_eq!(server.state().await, ServerState::Stopped);
@@ -372,7 +384,7 @@ mod tests {
         use crate::process::LspProcess;
         let header = "Content-Length: 123\r\n";
         assert_eq!(LspProcess::parse_content_length(header), Some(123));
-        
+
         let invalid_header = "Invalid: header\r\n";
         assert_eq!(LspProcess::parse_content_length(invalid_header), None);
     }
@@ -381,9 +393,9 @@ mod tests {
     async fn test_server_state_transitions() {
         let config = LspServerConfig::new().command("echo");
         let server = LspServer::new("test", config);
-        
+
         assert_eq!(server.state().await, ServerState::Stopped);
-        
+
         // Note: We can't actually test start() without a real LSP server
         // These would be integration tests
     }

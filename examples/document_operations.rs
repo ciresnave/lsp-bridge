@@ -3,7 +3,7 @@
 use lsp_bridge::{LspBridge, LspServerConfig};
 use lsp_types::Position;
 use std::time::Duration;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -184,7 +184,9 @@ impl Point {
 
     // 8. Document symbols
     println!("8. Getting document symbols...");
-    println!("   Would show: main(), calculate_sum(), Point struct, Point::new(), Point::distance_from_origin()");
+    println!(
+        "   Would show: main(), calculate_sum(), Point struct, Point::new(), Point::distance_from_origin()"
+    );
 
     println!("\nDocument operations example completed!");
     println!("This demonstrates the rich LSP features available through LSP Bridge.");

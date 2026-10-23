@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use lsp_bridge::prelude::*;
 use lsp_bridge::protocol::{LspRequest, RequestId};
 use lsp_bridge::{LspError, Result};

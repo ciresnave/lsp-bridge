@@ -307,20 +307,15 @@ pub struct GeneralClientCapabilities {
 }
 
 /// Trace level for LSP communication.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub enum TraceLevel {
     #[serde(rename = "off")]
+    #[default]
     Off,
     #[serde(rename = "messages")]
     Messages,
     #[serde(rename = "verbose")]
     Verbose,
-}
-
-impl Default for TraceLevel {
-    fn default() -> Self {
-        Self::Off
-    }
 }
 
 // Placeholder types for client capabilities - these would normally be imported from lsp-types

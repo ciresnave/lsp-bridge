@@ -3,7 +3,7 @@
 use lsp_bridge::{LspBridge, LspServerConfig};
 use lsp_types::Position;
 use std::time::Duration;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
