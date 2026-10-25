@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2]
+
+### Changed
+
+- CI only: workflow actions are pinned to full commit SHAs (tag kept in a trailing comment); `dtolnay/rust-toolchain` steps pass an explicit `toolchain` input because a SHA no longer carries the branch name; workflows default to `contents: read`.
+- Added `.github/CODEOWNERS` (`* @ciresnave`).
+
 ## [0.4.1]
 
 ### Added

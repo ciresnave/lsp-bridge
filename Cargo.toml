@@ -1,6 +1,6 @@
 [package]
 name = "lsp-bridge"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2024"
 rust-version = "1.89"
 description = "A comprehensive Rust library that provides a bridge between Language Server Protocol (LSP) servers and clients"
