@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Dependencies: `url` 2.5.8 to 2.5.9 and `form_urlencoded` 1.2.2 to 1.2.3 in `Cargo.lock` (RUSTSEC-2026-0592: `Url::origin()` stack overflow on nested `blob:` URLs). Lockfile only; no source change.
+
 ## [0.4.2]
 
 ### Changed
